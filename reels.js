@@ -38,7 +38,13 @@ function mount(s) {
   if (s.kind === "mp4") s.node = h("video", { src: s.r.url, loop: true, playsInline: true, muted: true, controls: true, preload: "auto" });
   else s.node = h("iframe", { src: embedUrl(s.r, false), allow: "autoplay; fullscreen; picture-in-picture", allowFullscreen: true, referrerPolicy: "strict-origin-when-cross-origin" });
   s.media.replaceChildren(s.node);
+  fitIg(s);
 }
+// scale factor so Instagram's video (364.5px wide inside its 540px embed) fills this slide's window
+function fitIg(s) {
+  if (s.kind === "ig" && s.media.clientWidth) s.media.style.setProperty("--s", String(s.media.clientWidth / 364.5));
+}
+window.addEventListener("resize", () => slides.forEach(fitIg));
 function unmount(s) { if (!s.node) return; s.node = null; s.auto = false; s.media.replaceChildren(); }
 function stop(s) {
   if (!s.node) return;
