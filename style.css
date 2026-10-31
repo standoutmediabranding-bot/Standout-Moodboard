@@ -414,3 +414,24 @@ details.edit summary { cursor: pointer; color: var(--muted); font-size: 13px; pa
   .viewer.kb .v-panel { grid-template-rows: minmax(0, 36dvh) 1fr; }
   .viewer.kb .v-ig { --w: min(calc(36dvh * 9 / 16), 100vw); }
 }
+
+/* Instagram's player pauses a video whenever its visible area changes, even briefly. So while commenting, the video
+   window must never resize or move: size it in lvh (the screen height WITHOUT the keyboard effect), and make the
+   panel unscrollable (overflow: clip can't be scrolled even by focus). */
+.v-panel { overflow: clip; }
+@media (max-width: 700px) {
+  .v-panel, .viewer.kb .v-panel { grid-template-rows: minmax(0, 34lvh) 1fr; }
+  .v-ig, .viewer.kb .v-ig { --w: min(calc(34lvh * 9 / 16), 100vw); }
+}
+
+/* phone: the video window uses the pixel size fixed by the viewer when it opened (see sizeMedia in viewer.js) */
+@media (max-width: 700px) {
+  .v-panel, .viewer.kb .v-panel { grid-template-rows: minmax(0, var(--v-media-h, 34lvh)) 1fr; }
+  .v-ig, .viewer.kb .v-ig { --w: var(--v-ig-w, min(calc(34lvh * 9 / 16), 100vw)); }
+}
+
+/* keyboard open: the video stays put, so give the rest the space that is left: comments + a one-line composer */
+.viewer.kb .v-head, .viewer.kb .reacts { display: none; }
+.viewer.kb .composer { display: flex; align-items: flex-end; gap: 8px; padding: 8px 12px; }
+.viewer.kb .composer textarea { flex: 1; height: 44px; min-height: 0; }
+.viewer.kb .composer .primary { width: auto; padding: 10px 18px; }

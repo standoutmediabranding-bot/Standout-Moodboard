@@ -191,6 +191,7 @@ async function open(id) {
   if (root.parentNode !== host) host.appendChild(root);
   if (root.hidden) MB.emit("media-hold", 1); // the feed's own videos/reels go quiet while this is open
   root.hidden = false;
+  sizeMedia();
   fitVig();
   document.body.classList.add("noscroll");
 }
@@ -236,8 +237,16 @@ function fitVig() {
 }
 // On a phone the keyboard shrinks the screen. Mark the viewer ("kb") so it hides the extras and keeps the video in view
 // above the keyboard, instead of scrolling the video away (Instagram pauses a video that is out of view).
-let baseH = innerHeight;
+let baseH = innerHeight, lastW = innerWidth;
+// The video window is sized ONCE, in pixels, from the full-height screen, and then never changes while the viewer is open.
+// Instagram's player pauses a video whenever its visible area changes, so the keyboard must not resize or move it.
+function sizeMedia() {
+  const H = Math.round(baseH * 0.34);
+  root.style.setProperty("--v-media-h", H + "px");
+  root.style.setProperty("--v-ig-w", Math.round(Math.min((H * 9) / 16, innerWidth)) + "px");
+}
 function onResize() {
+  if (innerWidth !== lastW) { lastW = innerWidth; baseH = innerHeight; sizeMedia(); } // rotated: measure again
   baseH = Math.max(baseH, innerHeight);
   root.classList.toggle("kb", innerHeight < baseH * 0.8);
   fitVig();
