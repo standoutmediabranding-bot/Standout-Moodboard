@@ -11,7 +11,7 @@ document.body.appendChild(root);
 let list = [], slides = [], idx = -1, muted = false, io = null, scroller = null;
 let isOpen = false, pushed = false;
 const counter = h("span", { class: "r-count" });
-const hint = h("div", { class: "r-hint", hidden: true }, "Tap ▶ to play · swipe the screen edges (or use ▲ ▼) for the next one");
+const hint = h("div", { class: "r-hint", hidden: true }, "Tap ▶ to play · swipe on the top or bottom of the video (or use ▲ ▼) for the next one");
 
 const playable = (r) => r.type === "video" || r.type === "embed";
 const kindOf = (r) => (r.type === "video" ? "mp4" : /instagram/.test(r.url) ? "ig" : "emb");
@@ -26,17 +26,20 @@ function buildSlide(r, i) {
     h("div", { class: "r-who" }, MB.avatarEl(r.created_by, 28), h("strong", {}, MB.nameOf(r.created_by) || r.author || ""), h("span", { class: "muted small" }, " " + MB.ago(r.created_at))),
     r.note && h("p", { class: "r-note" }, r.note),
     r.tags?.length ? h("div", { class: "chips" }, r.tags.map((t) => h("span", { class: "tag" }, "#" + t))) : null);
+  // Instagram/YouTube players swallow swipes that start on them, so give big swipe zones above the player
+  // (top, and bottom for Instagram). The middle stays free for the player's own ▶ button.
+  const zones = kind === "ig" ? [h("div", { class: "r-zone t" }), h("div", { class: "r-zone b" })] : kind === "emb" ? [h("div", { class: "r-zone t" })] : [];
   const el = h("section", { class: "r-slide " + kind },
-    media, h("div", { class: "r-edge l" }), h("div", { class: "r-edge r" }), info, rail);
+    media, h("div", { class: "r-edge l" }), h("div", { class: "r-edge r" }), zones, info, rail);
   el.dataset.i = i;
   const s = { r, kind, el, media, rail, node: null, auto: false };
   paintRail(s);
   return s;
 }
-function mount(s) {
+function mount(s, active = false) {
   if (s.node) return;
   if (s.kind === "mp4") s.node = h("video", { src: s.r.url, loop: true, playsInline: true, muted: true, controls: true, preload: "auto" });
-  else s.node = h("iframe", { src: embedUrl(s.r, false), allow: "autoplay; fullscreen; picture-in-picture", allowFullscreen: true, referrerPolicy: "strict-origin-when-cross-origin" });
+  else s.node = h("iframe", { src: embedUrl(s.r, active && s.kind === "emb"), allow: "autoplay; fullscreen; picture-in-picture", allowFullscreen: true, referrerPolicy: "strict-origin-when-cross-origin" });
   s.media.replaceChildren(s.node);
   fitIg(s);
 }
@@ -46,26 +49,36 @@ function fitIg(s) {
 }
 window.addEventListener("resize", () => slides.forEach(fitIg));
 function unmount(s) { if (!s.node) return; s.node = null; s.auto = false; s.media.replaceChildren(); }
+// An iframe can't be paused from outside, so leaving an Instagram/YouTube slide removes its player
+// completely. That is what silences its audio; uploaded videos are simply paused.
 function stop(s) {
   if (!s.node) return;
   if (s.kind === "mp4") s.node.pause();
-  else if (s.auto) { s.auto = false; s.node.src = embedUrl(s.r, false); } // reload without autoplay so it stops
+  else unmount(s);
 }
 function play(s) {
-  if (!s.node) return;
-  if (s.kind === "mp4") {
-    s.node.muted = muted;
-    s.node.play().catch(() => { muted = true; s.node.muted = true; s.node.play().catch(() => {}); paintRail(s); });
-  } else if (s.kind === "emb" && !s.auto) { s.auto = true; s.node.src = embedUrl(s.r, true); }
+  if (!s.node || s.kind !== "mp4") return;
+  s.node.muted = muted;
+  s.node.play().catch(() => { muted = true; s.node.muted = true; s.node.play().catch(() => {}); paintRail(s); });
 }
 
+let actTimer;
 function activate(i) {
+  // 1) right away: silence everything that is not the current slide
   slides.forEach((s, j) => {
-    if (j === i) { mount(s); play(s); }
-    else { stop(s); if (Math.abs(j - i) <= 1) mount(s); else unmount(s); }
+    if (j === i) return;
+    stop(s);
+    if (s.kind !== "mp4" || Math.abs(j - i) > 1) unmount(s);
   });
   counter.textContent = `${i + 1} / ${slides.length}`;
   hint.hidden = slides[i]?.kind !== "ig";
+  // 2) a moment later (so a fast flick through several slides doesn't load a player for each): start the current one
+  clearTimeout(actTimer);
+  actTimer = setTimeout(() => {
+    if (!isOpen || idx !== i) return;
+    mount(slides[i], true); play(slides[i]);
+    slides.forEach((s, j) => { if (s.kind === "mp4" && Math.abs(j - i) === 1) mount(s); }); // preload neighbouring uploads
+  }, 150);
 }
 
 /* ---------- side buttons ---------- */

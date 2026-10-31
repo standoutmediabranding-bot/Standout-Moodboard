@@ -377,3 +377,8 @@ button.linkish { background: none; border: 0; text-align: left; padding: 0; }
   transform: scale(var(--s, 1));
   transform-origin: 0 0;
 }
+
+/* big swipe zones above Instagram/YouTube players (they swallow swipes that start on them) */
+.r-zone { position: absolute; left: 0; right: 0; z-index: 3; }
+.r-zone.t { top: 0; height: 28%; }
+.r-zone.b { bottom: 0; height: 28%; }
