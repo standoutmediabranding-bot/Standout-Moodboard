@@ -125,6 +125,7 @@ function open(id) {
     h("button", { class: "r-circle", title: "Previous", on: { click: () => go(-1) } }, "▲"),
     h("button", { class: "r-circle", title: "Next", on: { click: () => go(1) } }, "▼"));
   root.replaceChildren(scroller, top, hint);
+  if (!isOpen) MB.emit("media-hold", 1); // the feed's own videos/reels go quiet while full screen is open
   root.hidden = false; isOpen = true; idx = -1;
   document.body.classList.add("noscroll");
   root.requestFullscreen?.().catch(() => {}); // hides the phone's status bar where the browser allows it
@@ -145,6 +146,7 @@ function open(id) {
 function close(fromHistory) {
   if (!isOpen) return;
   isOpen = false;
+  MB.emit("media-hold", -1);
   clearTimeout(chromeTimer);
   io?.disconnect(); io = null;
   slides.forEach((s) => { stop(s); unmount(s); });

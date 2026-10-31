@@ -386,3 +386,21 @@ button.linkish { background: none; border: 0; text-align: left; padding: 0; }
 /* reels: top buttons + hint fade out after a moment (tap the screen to bring them back) */
 .r-top, .r-hint { transition: opacity .5s ease; }
 .reels.chrome-hidden .r-top, .reels.chrome-hidden .r-hint { opacity: 0; pointer-events: none; }
+
+/* ---------- viewer: lean comment view ---------- */
+.reacts { display: block; padding: 4px 10px; }
+.react-row { display: flex; align-items: center; gap: 2px; }
+.more-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 6px 4px 8px; }
+.summary:empty { display: none; }
+.details { padding: 8px 14px 4px; }
+.details .chips { margin: 4px 0; }
+details.edit { margin: 6px 0 4px; border-top: 1px solid var(--line); padding-top: 6px; }
+details.edit summary { cursor: pointer; color: var(--muted); font-size: 13px; padding: 4px 0; }
+
+/* Instagram in the viewer: crop to the video only, so it is never cut off half way */
+.v-ig { --ig-head: 56px; --w: min(calc(80dvh * 9 / 16), 46vw); position: relative; overflow: hidden; background: #000; width: var(--w); height: calc(var(--w) * 16 / 9); }
+.v-ig iframe { position: absolute; left: calc(var(--s, 1) * -87.75px); top: calc(var(--s, 1) * var(--ig-head) * -1); width: 540px; height: calc(540px * 1.2 + var(--ig-head) + 320px); transform: scale(var(--s, 1)); transform-origin: 0 0; border: 0; }
+@media (max-width: 700px) {
+  .v-panel { grid-template-rows: minmax(0, 42dvh) 1fr; }
+  .v-ig { --w: min(calc(42dvh * 9 / 16), 100vw); }
+}

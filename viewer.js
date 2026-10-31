@@ -34,7 +34,12 @@ const isOwner = () => current && current.created_by === MB.user.id;
 function mediaNode(row) {
   if (row.type === "image") return h("img", { src: row.url, alt: "" });
   if (row.type === "video") return h("video", { src: row.url, controls: true, autoplay: true, muted: true, loop: true, playsInline: true });
-  if (row.type === "embed") return h("iframe", { src: row.url, allow: "fullscreen; picture-in-picture", allowFullscreen: true, referrerPolicy: "strict-origin-when-cross-origin", class: /instagram/.test(row.url) ? "tall" : "wide" });
+  if (row.type === "embed") {
+    const f = h("iframe", { src: row.url, allow: "fullscreen; picture-in-picture", allowFullscreen: true, referrerPolicy: "strict-origin-when-cross-origin" });
+    if (/instagram/.test(row.url)) return h("div", { class: "v-ig" }, f); // cropped to the video, header/footer hidden
+    f.className = "wide";
+    return f;
+  }
   if (row.type === "note") return h("div", { class: "bignote" }, row.text || "(empty note)");
   const o = origUrl(row);
   return h("div", { class: "linkcard" }, h("strong", {}, o ? new URL(o).hostname : row.url), h("span", { class: "muted small" }, row.url),
@@ -45,45 +50,63 @@ async function save(fields) {
   const { data, error } = await sbc().from("items").update(fields).eq("id", current.id).select().single();
   if (error) return MB.status(error.message, 4000);
   current = data;
+  paintSummary();
   if (MB.items.has(data.id)) MB.upsertLocal(data);
   MB.status("Saved", 1200);
 }
 
+// Compact summary (note + tags + status). Only the owner gets an "Edit" line, collapsed by default,
+// so the comment view isn't crowded with form fields.
+const summaryBox = h("div", { class: "summary" });
+function paintSummary() {
+  if (!current) return;
+  const row = current, tags = row.tags || [];
+  summaryBox.replaceChildren(...[
+    row.note && h("p", { class: "note-text" }, row.note),
+    (tags.length || row.status) && h("div", { class: "chips" },
+      ...tags.map((t) => h("button", { class: "chip", on: { click: () => { close(); MB.setQuery("#" + t); } } }, "#" + t)),
+      row.status && h("span", { class: "chip status" }, STATUSES.find((x) => x[0] === row.status)?.[1] || row.status)),
+  ].filter(Boolean));
+}
 function detailsNode() {
   const row = current;
-  const tags = (row.tags || []);
-  if (!isOwner()) {
-    return h("div", { class: "details" },
-      row.note && h("p", { class: "note-text" }, row.note),
-      h("div", { class: "chips" }, tags.map((t) => h("button", { class: "chip", on: { click: () => { close(); MB.setQuery("#" + t); } } }, "#" + t)),
-        row.status && h("span", { class: "chip status" }, STATUSES.find((s) => s[0] === row.status)?.[1] || row.status)));
-  }
+  paintSummary();
+  if (!isOwner()) return h("div", { class: "details" }, summaryBox);
+  const tags = row.tags || [];
   const note = h("textarea", { rows: 3, maxLength: 500, value: row.note || "", placeholder: "Why did you save this?", on: { blur: () => { if ((note.value.trim() || null) !== (current.note || null)) save({ note: note.value.trim() || null }); } } });
   const tagIn = h("input", { value: tags.join(", "), placeholder: "tags: hook, transitions", on: { blur: () => {
-    const t = [...new Set(tagIn.value.split(/[\s,]+/).map((x) => x.replace(/^#/, "").toLowerCase()).filter(Boolean))].slice(0, 8);
+    const t = [...new Set(tagIn.value.split(/[s,]+/).map((x) => x.replace(/^#/, "").toLowerCase()).filter(Boolean))].slice(0, 8);
     if (t.join() !== (current.tags || []).join()) save({ tags: t });
   } } });
   const st = h("select", { on: { change: () => save({ status: st.value || null }) } }, STATUSES.map(([v, l]) => h("option", { value: v, textContent: l })));
   st.value = row.status || "";
-  return h("div", { class: "details form" }, h("label", {}, "Note", note), h("label", {}, "Tags", tagIn), h("label", {}, "Status", st));
+  return h("div", { class: "details" }, summaryBox,
+    h("details", { class: "edit" }, h("summary", {}, "✎ Edit note, tags, status"),
+      h("div", { class: "form" }, h("label", {}, "Note", note), h("label", {}, "Tags", tagIn), h("label", {}, "Status", st))));
 }
 
 /* ---------- reactions bar ---------- */
 const reactsBox = h("div", { class: "reacts" });
+let moreOpen = false;
 function paintReacts() {
   if (!current) return;
   const counts = D.reactionCounts(current.id);
   const fav = D.favs.has(current.id);
   const o = origUrl(current);
-  reactsBox.replaceChildren(...[
+  const isVideo = current.type === "embed" || current.type === "video";
+  const row = h("div", { class: "react-row" }, ...[
     ...D.EMOJIS.map((e) => h("button", { class: "react" + (D.mine(current.id, e) ? " on" : ""), on: { click: () => D.toggleReact(current.id, e) } }, e, counts[e] ? h("b", {}, " " + counts[e]) : null)),
-    (current.type === "embed" || current.type === "video") && h("button", { class: "react", title: "Full screen: swipe through videos", on: { click: () => { const id = current.id; close(); MB.reels.open(id); } } }, "⛶ Full screen"),
-    current.type === "embed" && h("button", { class: "react", title: "Watch again", on: { click: () => replay(root) } }, "↻ Replay"),
-    current.type === "embed" && h("button", { class: "react", title: "Instagram won't play it here? Attach the video file", on: { click: () => attachVideo(current) } }, "📎 Attach video"),
+    isVideo && h("button", { class: "react", title: "Full screen: swipe through videos", on: { click: () => { const id = current.id; close(); MB.reels.open(id); } } }, "⛶"),
     h("span", { class: "grow" }),
     h("button", { class: "react" + (fav ? " on" : ""), title: "Save to my list", on: { click: () => D.toggleFav(current.id) } }, fav ? "★ Saved" : "☆ Save"),
+    h("button", { class: "react", title: "More", on: { click: () => { moreOpen = !moreOpen; paintReacts(); } } }, "⋯"),
+  ].filter(Boolean));
+  const more = moreOpen ? h("div", { class: "more-row" }, ...[
+    current.type === "embed" && h("button", { class: "btn", title: "Watch again", on: { click: () => replay(root) } }, "↻ Replay"),
+    current.type === "embed" && h("button", { class: "btn", title: "Instagram won't play it here? Attach the video file", on: { click: () => attachVideo(current) } }, "📎 Attach video"),
     o && h("a", { class: "btn", href: o, target: "_blank", rel: "noopener noreferrer" }, "Open original"),
-  ].filter(Boolean)); // replaceChildren would print null/false as text
+  ].filter(Boolean)) : null;
+  reactsBox.replaceChildren(...[row, more].filter(Boolean)); // replaceChildren would print null/false as text
 }
 
 /* ---------- comments ---------- */
@@ -161,15 +184,18 @@ async function open(id) {
     if (!data || data.deleted_at) return MB.status("That item isn't available any more", 3000);
     row = data; await D.load([id]);
   }
-  current = row; replyTo = null;
+  current = row; replyTo = null; moreOpen = false;
   render();
   // in browser full screen only the full-screen element is visible, so show the viewer inside it
   const host = document.fullscreenElement || document.body;
   if (root.parentNode !== host) host.appendChild(root);
+  if (root.hidden) MB.emit("media-hold", 1); // the feed's own videos/reels go quiet while this is open
   root.hidden = false;
+  fitVig();
   document.body.classList.add("noscroll");
 }
 function close() {
+  if (!root.hidden) MB.emit("media-hold", -1);
   root.hidden = true; root.replaceChildren(); current = null;
   document.body.classList.remove("noscroll");
 }
@@ -204,6 +230,11 @@ function attachVideo(row, done) {
   input.click();
 }
 MB.attachVideo = attachVideo;
+// scale factor so Instagram's video (364.5px wide inside its 540px embed) fills the viewer's window
+function fitVig() {
+  root.querySelectorAll(".v-ig").forEach((el) => { if (el.clientWidth) el.style.setProperty("--s", String(el.clientWidth / 364.5)); });
+}
+window.addEventListener("resize", fitVig);
 MB.viewer = { open, close };
 MB.origUrl = origUrl;
 

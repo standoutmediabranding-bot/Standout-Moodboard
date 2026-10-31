@@ -79,22 +79,44 @@ const sigOf = (r) => JSON.stringify([r.type, r.url, r.text, r.note, r.tags, r.st
 
 // Uploaded videos pause, and Instagram/YouTube players are unloaded, once their card has scrolled away.
 // An iframe can't be paused from outside, so unloading it is what stops the sound. It reloads when you scroll back.
+// While full screen or the viewer is open ("media-hold"), everything in the feed stays silent, so two videos never overlap.
+const mediaEls = new Set();
+let holds = 0;
+function silence(el) {
+  if (el.tagName === "VIDEO") { el.pause(); return; }
+  const f = el.querySelector("iframe");
+  if (f && f.getAttribute("src") !== "about:blank") f.src = "about:blank";
+}
 const mediaIO = new IntersectionObserver((entries) => {
   for (const e of entries) {
     const el = e.target;
-    if (el.tagName === "VIDEO") { if (!e.isIntersecting) el.pause(); continue; }
+    if (holds > 0 || !e.isIntersecting) { silence(el); continue; }
+    if (el.tagName === "VIDEO") continue;
     const f = el.querySelector("iframe");
-    if (!f) continue;
-    const want = e.isIntersecting ? f.dataset.src : "about:blank";
-    if (f.getAttribute("src") !== want) f.src = want;
+    if (f && f.getAttribute("src") !== f.dataset.src) f.src = f.dataset.src;
   }
 }, { root: feed, rootMargin: "150px 0px" });
+const watch = (el) => { mediaEls.add(el); mediaIO.observe(el); };
+let resumeTimer;
+MB.bus.addEventListener("media-hold", (ev) => {
+  holds = Math.max(0, holds + ev.detail);
+  clearTimeout(resumeTimer);
+  if (holds > 0) { mediaEls.forEach(silence); return; }
+  // everything closed: bring back what's on screen (after a beat, in case another one is about to open)
+  resumeTimer = setTimeout(() => {
+    if (holds > 0) return;
+    mediaEls.forEach((el) => {
+      if (!el.isConnected) { mediaEls.delete(el); mediaIO.unobserve(el); return; }
+      mediaIO.unobserve(el); mediaIO.observe(el);
+    });
+  }, 250);
+});
 
 function preview(r) {
   if (r.type === "image") return h("img", { src: r.url, loading: "lazy", alt: "", on: { click: () => MB.viewer.open(r.id) } });
   if (r.type === "video") {
     const v = h("video", { src: r.url, controls: true, muted: true, loop: true, playsInline: true, preload: "metadata" });
-    mediaIO.observe(v);
+    watch(v);
     return v;
   }
   if (r.type === "embed") {
@@ -103,7 +125,7 @@ function preview(r) {
     const f = h("iframe", { allow: "fullscreen; picture-in-picture", allowFullscreen: true, referrerPolicy: "strict-origin-when-cross-origin" });
     f.dataset.src = r.url;
     const box = h("div", { class: "embed " + (ig ? "tall" : "wide") }, f);
-    mediaIO.observe(box);
+    watch(box);
     return box;
   }
   if (r.type === "note") return h("div", { class: "bignote", on: { click: () => MB.viewer.open(r.id) } }, r.text || "(empty note)");
