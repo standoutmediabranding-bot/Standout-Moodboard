@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Standout Moodboard</title>
+<meta name="theme-color" content="#101211">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<section id="setup" class="screen" hidden>
+  <div class="card">
+    <h1>Almost there</h1>
+    <p>Add your Supabase URL and anon key to <code>config.js</code>, then reload. Steps are in <code>README.md</code>.</p>
+  </div>
+</section>
+
+<section id="auth" class="screen" hidden>
+  <form class="card" id="auth-form">
+    <h1 id="auth-title">Standout Moodboard</h1>
+    <p class="muted">Sign in to see the team's references.</p>
+    <label>Email<input type="email" id="email" required autocomplete="email"></label>
+    <label>Password<input type="password" id="password" required minlength="6" autocomplete="current-password"></label>
+    <p id="auth-error" class="error" hidden></p>
+    <button class="primary" id="auth-submit">Sign in</button>
+    <button type="button" class="link" id="auth-toggle">New here? Create an account</button>
+    <button type="button" class="link" id="auth-forgot">Forgot password?</button>
+  </form>
+</section>
+
+<div id="app" hidden>
+  <header>
+    <strong class="brand">Standout Moodboard</strong>
+    <select id="board-select" title="Board"></select>
+    <button id="new-board">+ Board</button>
+    <span class="sep"></span>
+    <button class="primary" id="btn-upload">Upload</button>
+    <button id="btn-note">Note</button>
+    <button id="btn-link">Link</button>
+    <input type="file" id="file-input" accept="image/*,video/*" multiple hidden>
+    <input type="search" id="search" placeholder="Search notes, #tags, people…" autocomplete="off">
+    <span class="grow"></span>
+    <button id="zoom-out" title="Zoom out">−</button>
+    <button id="zoom-label" title="Fit all">100%</button>
+    <button id="zoom-in" title="Zoom in">+</button>
+    <span class="sep"></span>
+    <span id="who" hidden></span><button id="sign-out" hidden>Sign out</button>
+    <button id="btn-menu" title="Menu">☰</button>
+  </header>
+  <div id="modal" class="modal" hidden><div class="sheet"><header class="sheet-head"><strong id="modal-title"></strong><button id="modal-close" title="Close">✕</button></header><div id="modal-body"></div></div></div>
+
+  <main id="stage">
+    <div id="world"></div>
+    <div id="empty" class="empty" hidden>Drop images or videos here, paste a link, or hit Upload.</div>
+  </main>
+
+  <div id="status" hidden></div>
+  <div id="hint">Drag to pan · Ctrl/⌘ + scroll to zoom · Delete removes the selected item</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script src="social.js"></script>
+<script src="compose.js"></script>
+<script src="data.js"></script>
+<script src="viewer.js"></script>
+<script src="feed.js"></script>
+<script src="boards.js"></script>
+<script src="insights.js"></script>
+</body>
+</html>
