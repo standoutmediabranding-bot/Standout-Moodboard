@@ -404,3 +404,13 @@ details.edit summary { cursor: pointer; color: var(--muted); font-size: 13px; pa
   .v-panel { grid-template-rows: minmax(0, 42dvh) 1fr; }
   .v-ig { --w: min(calc(42dvh * 9 / 16), 100vw); }
 }
+
+/* viewer with the phone keyboard open: keep the video in view, drop the extras, keep the comment box visible */
+.viewer.kb .more-row, .viewer.kb .details, .viewer.kb .composer .chips, .viewer.kb .replybar { display: none; }
+.viewer.kb .composer { padding: 6px 12px; gap: 6px; }
+.viewer.kb .composer textarea { height: 44px; min-height: 0; }
+.viewer.kb .v-head { padding: 6px 12px; }
+@media (max-width: 700px) {
+  .viewer.kb .v-panel { grid-template-rows: minmax(0, 36dvh) 1fr; }
+  .viewer.kb .v-ig { --w: min(calc(36dvh * 9 / 16), 100vw); }
+}

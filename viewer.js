@@ -234,7 +234,17 @@ MB.attachVideo = attachVideo;
 function fitVig() {
   root.querySelectorAll(".v-ig").forEach((el) => { if (el.clientWidth) el.style.setProperty("--s", String(el.clientWidth / 364.5)); });
 }
-window.addEventListener("resize", fitVig);
+// On a phone the keyboard shrinks the screen. Mark the viewer ("kb") so it hides the extras and keeps the video in view
+// above the keyboard, instead of scrolling the video away (Instagram pauses a video that is out of view).
+let baseH = innerHeight;
+function onResize() {
+  baseH = Math.max(baseH, innerHeight);
+  root.classList.toggle("kb", innerHeight < baseH * 0.8);
+  fitVig();
+}
+window.addEventListener("resize", onResize);
+// if anything did scroll the panel (focus can do that), put it back
+root.addEventListener("focusin", () => requestAnimationFrame(() => root.querySelectorAll(".v-panel, .v-side").forEach((n) => { n.scrollTop = 0; })));
 MB.viewer = { open, close };
 MB.origUrl = origUrl;
 
