@@ -66,12 +66,13 @@ function activate(i) {
 const rbtn = (icon, count, on, fn) => h("button", { class: "r-btn" + (on ? " on" : ""), on: { click: fn } }, h("span", {}, icon), count ? h("b", {}, String(count)) : null);
 function paintRail(s) {
   const r = s.r, counts = D.reactionCounts(r.id), cc = (D.comments.get(r.id) || []).length, fav = D.favs.has(r.id);
-  s.rail.replaceChildren(
+  s.rail.replaceChildren(...[
     rbtn("🔥", counts["🔥"] || "", D.mine(r.id, "🔥"), () => D.toggleReact(r.id, "🔥")),
     rbtn("💬", cc || "", false, () => MB.viewer.open(r.id)),
     rbtn(fav ? "★" : "☆", "", fav, () => D.toggleFav(r.id)),
     r.type === "embed" ? rbtn("↻", "", false, () => MB.replay(s.media)) : null,
-    s.kind === "mp4" ? rbtn(muted ? "🔇" : "🔊", "", false, () => { muted = !muted; if (s.node) s.node.muted = muted; slides.forEach(paintRail); }) : null);
+    s.kind === "mp4" ? rbtn(muted ? "🔇" : "🔊", "", false, () => { muted = !muted; if (s.node) s.node.muted = muted; slides.forEach(paintRail); }) : null,
+  ].filter(Boolean)); // replaceChildren would print null/false as text
 }
 MB.bus.addEventListener("social-changed", (e) => { if (isOpen) slides.filter((s) => s.r.id === e.detail).forEach(paintRail); });
 

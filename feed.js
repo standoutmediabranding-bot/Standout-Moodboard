@@ -23,7 +23,8 @@ const sortSel = h("select", {}, [["new", "Newest"], ["old", "Oldest"], ["hot", "
 const size = h("input", { type: "range", min: 220, max: 520, step: 10, value: localStorage.getItem("mb:cardw") || 320, title: "Card size" });
 const grid = h("div", { class: "feed-grid" });
 const feed = h("section", { id: "feed" },
-  h("div", { class: "feed-bar" }, chipBar, h("span", { class: "grow" }), sortSel, h("label", { class: "size muted small" }, "Size ", size)),
+  h("div", { class: "feed-bar" }, chipBar, h("span", { class: "grow" }),
+    h("button", { title: "Refresh", on: { click: () => location.reload() } }, "↻ Refresh"), sortSel, h("label", { class: "size muted small" }, "Size ", size)),
   grid);
 $("#stage").after(feed);
 grid.replaceChildren(h("p", { class: "muted empty-feed" }, "Loading your board…"));
@@ -99,7 +100,7 @@ function footer(r) {
     r.type === "embed" && h("button", { class: "react", title: "Watch again", on: { click: (e) => MB.replay(e.currentTarget.closest(".card")) } }, "↻"),
     h("span", { class: "grow" }),
     h("button", { class: "react" + (D.favs.has(r.id) ? " on" : ""), title: "Save", on: { click: () => D.toggleFav(r.id) } }, D.favs.has(r.id) ? "★" : "☆"),
-  ];
+  ].filter(Boolean); // updating a footer uses replaceChildren, which would print null/false as text
 }
 function buildCard(r) {
   const foot = h("div", { class: "foot" }, ...footer(r));
@@ -169,6 +170,23 @@ function showNews() {
   D.markSeen();
 }
 bell.onclick = showNews;
+
+/* ---------- refresh: menu item + pull down at the top of the feed ---------- */
+MB.menuItems.push({ icon: "↻", label: "Refresh (loads the latest version)", run: () => location.reload() });
+const ptr = h("div", { class: "ptr" });
+feed.prepend(ptr);
+let pullY = null, pullD = 0;
+feed.addEventListener("touchstart", (e) => { pullY = feed.scrollTop === 0 ? e.touches[0].clientY : null; pullD = 0; }, { passive: true });
+feed.addEventListener("touchmove", (e) => {
+  if (pullY == null) return;
+  pullD = e.touches[0].clientY - pullY;
+  ptr.classList.toggle("show", pullD > 40);
+  ptr.textContent = pullD > 110 ? "Release to refresh" : "Pull down to refresh";
+}, { passive: true });
+feed.addEventListener("touchend", () => {
+  if (pullY != null && pullD > 110) { ptr.textContent = "Refreshing…"; location.reload(); }
+  ptr.classList.remove("show"); pullY = null;
+});
 
 // first view: phones start in the feed, desktops on the canvas (runs last so everything above exists)
 setView(localStorage.getItem("mb:view") || (matchMedia("(max-width:700px)").matches ? "feed" : "canvas"));

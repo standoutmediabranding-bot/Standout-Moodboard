@@ -74,13 +74,14 @@ function paintReacts() {
   const counts = D.reactionCounts(current.id);
   const fav = D.favs.has(current.id);
   const o = origUrl(current);
-  reactsBox.replaceChildren(
+  reactsBox.replaceChildren(...[
     ...D.EMOJIS.map((e) => h("button", { class: "react" + (D.mine(current.id, e) ? " on" : ""), on: { click: () => D.toggleReact(current.id, e) } }, e, counts[e] ? h("b", {}, " " + counts[e]) : null)),
     (current.type === "embed" || current.type === "video") && h("button", { class: "react", title: "Full screen: swipe through videos", on: { click: () => { const id = current.id; close(); MB.reels.open(id); } } }, "⛶ Full screen"),
     current.type === "embed" && h("button", { class: "react", title: "Watch again", on: { click: () => replay(root) } }, "↻ Replay"),
     h("span", { class: "grow" }),
     h("button", { class: "react" + (fav ? " on" : ""), title: "Save to my list", on: { click: () => D.toggleFav(current.id) } }, fav ? "★ Saved" : "☆ Save"),
-    o && h("a", { class: "btn", href: o, target: "_blank", rel: "noopener noreferrer" }, "Open original"));
+    o && h("a", { class: "btn", href: o, target: "_blank", rel: "noopener noreferrer" }, "Open original"),
+  ].filter(Boolean)); // replaceChildren would print null/false as text
 }
 
 /* ---------- comments ---------- */

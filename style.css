@@ -350,3 +350,11 @@ button.linkish { background: none; border: 0; text-align: left; padding: 0; }
 .r-btn b { font-size: 11px; font-weight: 600; }
 .r-btn.on { background: rgba(31,211,94,.55); }
 @media (min-width: 701px) { .r-rail { right: calc(50% - 270px); } .r-info { left: calc(50% - 250px); right: auto; width: 420px; } }
+
+/* Instagram embeds in reels mode: crop to the video area only (hide Instagram's header, likes and comment box) */
+.r-media.ig { --ig-head: 54px; position: relative; overflow: hidden; width: min(100vw, calc(100dvh * 9 / 16)); height: min(100dvh, calc(100vw * 16 / 9)); }
+.r-media.ig iframe { position: absolute; left: 0; top: calc(var(--ig-head) * -1); width: 100%; height: calc(100% + var(--ig-head) + 260px); }
+
+/* pull-to-refresh hint in the feed */
+.ptr { height: 0; overflow: hidden; text-align: center; color: var(--muted); font-size: 13px; transition: height .15s; }
+.ptr.show { height: 34px; line-height: 34px; }
