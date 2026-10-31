@@ -104,7 +104,11 @@ function setUser(u) {
   $("#auth").hidden = !!u;
   $("#app").hidden = !u;
   if (same && u) return;
-  if (u) { $("#who").textContent = u.email; loadProfiles().then(() => { loadBoards(); emit("login"); }); }
+  if (u) {
+    $("#who").textContent = u.email;
+    loadBoards();                       // don't wait for profiles: they load in parallel and the cards repaint with names/avatars
+    loadProfiles().then(() => { emit("profiles"); emit("login"); });
+  }
   else { closeBoard(); }
 }
 

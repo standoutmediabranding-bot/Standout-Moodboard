@@ -26,6 +26,7 @@ const feed = h("section", { id: "feed" },
   h("div", { class: "feed-bar" }, chipBar, h("span", { class: "grow" }), sortSel, h("label", { class: "size muted small" }, "Size ", size)),
   grid);
 $("#stage").after(feed);
+grid.replaceChildren(h("p", { class: "muted empty-feed" }, "Loading your board…"));
 
 const bar = h("nav", { class: "mbar" },
   h("button", { id: "m-view", on: { click: () => setView(app.dataset.view === "feed" ? "canvas" : "feed") } }),
@@ -94,6 +95,7 @@ function footer(r) {
   return [
     ...D.EMOJIS.map((e) => h("button", { class: "react" + (D.mine(r.id, e) ? " on" : ""), on: { click: () => D.toggleReact(r.id, e) } }, e, counts[e] ? h("b", {}, " " + counts[e]) : null)),
     h("button", { class: "react", on: { click: () => MB.viewer.open(r.id) } }, "💬", cc ? h("b", {}, " " + cc) : null),
+    (r.type === "embed" || r.type === "video") && h("button", { class: "react", title: "Full screen: swipe through videos", on: { click: () => MB.reels.open(r.id) } }, "⛶"),
     r.type === "embed" && h("button", { class: "react", title: "Watch again", on: { click: (e) => MB.replay(e.currentTarget.closest(".card")) } }, "↻"),
     h("span", { class: "grow" }),
     h("button", { class: "react" + (D.favs.has(r.id) ? " on" : ""), title: "Save", on: { click: () => D.toggleFav(r.id) } }, D.favs.has(r.id) ? "★" : "☆"),
@@ -125,6 +127,7 @@ function render(force) {
     rows.sort((a, b) => s === "old" ? new Date(a.created_at) - new Date(b.created_at)
       : s === "hot" ? Object.values(D.reactionCounts(b.id)).reduce((x, y) => x + y, 0) - Object.values(D.reactionCounts(a.id)).reduce((x, y) => x + y, 0)
       : new Date(b.created_at) - new Date(a.created_at));
+    MB.feedRows = rows; // reels mode plays the videos in this same order
     const els = rows.map((r) => {
       const sig = sigOf(r), c = cache.get(r.id);
       if (c && c.sig === sig) return c.el;

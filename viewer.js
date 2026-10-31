@@ -76,6 +76,7 @@ function paintReacts() {
   const o = origUrl(current);
   reactsBox.replaceChildren(
     ...D.EMOJIS.map((e) => h("button", { class: "react" + (D.mine(current.id, e) ? " on" : ""), on: { click: () => D.toggleReact(current.id, e) } }, e, counts[e] ? h("b", {}, " " + counts[e]) : null)),
+    (current.type === "embed" || current.type === "video") && h("button", { class: "react", title: "Full screen: swipe through videos", on: { click: () => { const id = current.id; close(); MB.reels.open(id); } } }, "⛶ Full screen"),
     current.type === "embed" && h("button", { class: "react", title: "Watch again", on: { click: () => replay(root) } }, "↻ Replay"),
     h("span", { class: "grow" }),
     h("button", { class: "react" + (fav ? " on" : ""), title: "Save to my list", on: { click: () => D.toggleFav(current.id) } }, fav ? "★ Saved" : "☆ Save"),
@@ -159,6 +160,9 @@ async function open(id) {
   }
   current = row; replyTo = null;
   render();
+  // in browser full screen only the full-screen element is visible, so show the viewer inside it
+  const host = document.fullscreenElement || document.body;
+  if (root.parentNode !== host) host.appendChild(root);
   root.hidden = false;
   document.body.classList.add("noscroll");
 }
