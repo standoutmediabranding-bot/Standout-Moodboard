@@ -38,7 +38,7 @@ function buildSlide(r, i) {
 }
 function mount(s, active = false) {
   if (s.node) return;
-  if (s.kind === "mp4") s.node = h("video", { src: s.r.url, loop: true, playsInline: true, muted: true, controls: true, preload: "auto" });
+  if (s.kind === "mp4") s.node = h("video", { src: s.r.url, loop: true, playsInline: true, muted: true, controls: true, preload: active ? "auto" : "metadata" }); // neighbours only fetch metadata, to save data
   else s.node = h("iframe", { src: embedUrl(s.r, active && s.kind === "emb"), allow: "autoplay; fullscreen; picture-in-picture", allowFullscreen: true, referrerPolicy: "strict-origin-when-cross-origin" });
   s.media.replaceChildren(s.node);
   fitIg(s);

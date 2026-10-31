@@ -27,6 +27,16 @@ $("#modal-close").onclick = closeModal;
 modal.addEventListener("pointerdown", (e) => { if (e.target === modal) closeModal(); });
 window.addEventListener("keydown", (e) => { if (e.key === "Escape" && !modal.hidden) closeModal(); });
 MB.h = h;
+// Supabase returns at most 1000 rows per request; this keeps asking until everything is in.
+MB.fetchAll = async (make) => {
+  let out = [];
+  for (let from = 0; ; from += 1000) {
+    const { data } = await make().range(from, from + 999);
+    out = out.concat(data || []);
+    if (!data || data.length < 1000) break;
+  }
+  return out;
+};
 MB.modal = { open: openModal, close: closeModal };
 
 const ago = (iso) => {
@@ -76,7 +86,7 @@ MB.bus.addEventListener("profiles", () => {
 
 /* ---------- members ---------- */
 async function membersModal() {
-  const { data: rows } = await sbc().from("items").select("created_by").is("deleted_at", null);
+  const rows = await MB.fetchAll(() => sbc().from("items").select("created_by").is("deleted_at", null).order("created_at"));
   const counts = {};
   (rows || []).forEach((r) => (counts[r.created_by] = (counts[r.created_by] || 0) + 1));
   const people = [...MB.profiles.values()].sort((a, b) => a.name.localeCompare(b.name));
@@ -98,6 +108,7 @@ function profileModal() {
   const name = h("input", { value: me.name, maxLength: 30, placeholder: "Your name" });
   const preview = h("span", { class: "av-preview" }, MB.avatarEl(MB.user.id, 64));
   const file = h("input", { type: "file", accept: "image/*", hidden: true });
+  const pw = h("input", { type: "password", placeholder: "New password (6+ characters)", minLength: 6, autocomplete: "new-password", autocapitalize: "none", autocorrect: "off", spellcheck: false });
   const swatches = h("div", { class: "swatches" }, COLORS.map((c) =>
     h("button", { type: "button", class: "swatch" + (c === color ? " on" : ""), style: `background:${c}`, on: { click: (e) => {
       color = c; swatches.querySelectorAll(".swatch").forEach((s) => s.classList.remove("on")); e.currentTarget.classList.add("on");
@@ -124,7 +135,15 @@ function profileModal() {
       h("div", { class: "row" }, preview, h("button", { on: { click: () => file.click() } }, "Change photo"), file),
       h("label", {}, "Name", name),
       h("label", {}, "Colour", swatches),
-      save));
+      save,
+      h("hr", {}),
+      h("label", {}, "Change password", pw),
+      h("button", { on: { click: async () => {
+        if (pw.value.length < 6) return MB.status("Use at least 6 characters", 3000);
+        const { error } = await sbc().auth.updateUser({ password: pw.value });
+        if (error) return MB.status(error.message, 4000);
+        pw.value = ""; MB.status("Password changed", 3000);
+      } } }, "Update password")));
 }
 
 /* ---------- trash ---------- */

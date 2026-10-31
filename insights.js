@@ -9,12 +9,11 @@ const KIND = { video: "a video", embed: "a reel/video", image: "a design", link:
 
 /* ---------- dashboard ---------- */
 async function dashboard(range = "7") {
-  const [it, rx, cm] = await Promise.all([
-    sbc().from("items").select("id,created_by,created_at,type,tags,note,board_id").is("deleted_at", null),
-    sbc().from("reactions").select("item_id,user_id,created_at"),
-    sbc().from("comments").select("item_id,user_id,created_at"),
+  const [items, reacts, comments] = await Promise.all([
+    MB.fetchAll(() => sbc().from("items").select("id,created_by,created_at,type,tags,note,board_id").is("deleted_at", null).order("created_at")),
+    MB.fetchAll(() => sbc().from("reactions").select("item_id,user_id,created_at").order("created_at")),
+    MB.fetchAll(() => sbc().from("comments").select("item_id,user_id,created_at").order("created_at")),
   ]);
-  const items = it.data || [], reacts = rx.data || [], comments = cm.data || [];
   const from = range === "all" ? 0 : Date.now() - Number(range) * DAY;
   const inR = (x) => new Date(x.created_at).getTime() >= from;
   const rItems = items.filter(inR), rReacts = reacts.filter(inR), rComments = comments.filter(inR);

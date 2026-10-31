@@ -31,6 +31,25 @@ async function load(ids) {
 }
 D.load = load;
 
+// Whole-board load. Filtering by board on the server keeps the request small however many cards a board has
+// (listing hundreds of ids in the URL would eventually exceed the URL length limit and fail).
+async function loadBoard(boardId) {
+  const ids = [...MB.items.keys()];
+  if (!ids.length) return;
+  const [r, c] = await Promise.all([
+    sbc().from("reactions").select("*, items!inner(board_id)").eq("items.board_id", boardId),
+    sbc().from("comments").select("*, items!inner(board_id)").eq("items.board_id", boardId).order("created_at"),
+  ]);
+  if (r.error || c.error) { // fallback: same thing in small batches
+    for (let i = 0; i < ids.length; i += 80) await load(ids.slice(i, i + 80));
+    return;
+  }
+  for (const id of ids) { D.reacts.set(id, []); D.comments.set(id, []); }
+  (r.data || []).forEach((x) => D.reacts.get(x.item_id)?.push(x));
+  (c.data || []).forEach((x) => D.comments.get(x.item_id)?.push(x));
+  ids.forEach(changed);
+}
+
 D.reactionCounts = (id) => {
   const out = {};
   for (const r of D.reacts.get(id) || []) out[r.emoji] = (out[r.emoji] || 0) + 1;
@@ -97,7 +116,7 @@ function paintCounts(id) {
   pill.textContent = [fav ? "★" : "", cc ? `💬 ${cc}` : "", rc ? `🔥 ${rc}` : ""].filter(Boolean).join("  ");
 }
 MB.bus.addEventListener("social-changed", (e) => paintCounts(e.detail));
-MB.bus.addEventListener("board-opened", () => load([...MB.items.keys()]));
+MB.bus.addEventListener("board-opened", (e) => loadBoard(e.detail));
 
 /* ---------- live updates from teammates ---------- */
 MB.bus.addEventListener("login", async () => {

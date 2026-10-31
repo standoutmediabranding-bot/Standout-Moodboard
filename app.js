@@ -17,6 +17,28 @@ let query = "";
 const bus = new EventTarget();
 const emit = (name, detail) => bus.dispatchEvent(new CustomEvent(name, { detail }));
 
+// Reels/YouTube cards on the canvas are only loaded while they are on screen (plus a margin). A board with dozens
+// of them would otherwise load dozens of heavy players at once and slow or crash the browser.
+// While full screen or the viewer is open ("media-hold") they stay unloaded so nothing plays underneath.
+let canvasHold = 0;
+const embedEls = new Set();
+const embedIO = new IntersectionObserver((entries) => {
+  for (const e of entries) {
+    const f = e.target.querySelector("iframe");
+    if (!f) continue;
+    const want = e.isIntersecting && !canvasHold ? f.dataset.src : "about:blank";
+    if (f.getAttribute("src") !== want) f.src = want;
+  }
+}, { root: stage, rootMargin: "300px" });
+bus.addEventListener("media-hold", (ev) => {
+  canvasHold = Math.max(0, canvasHold + ev.detail);
+  for (const el of embedEls) {
+    if (!el.isConnected) { embedEls.delete(el); embedIO.unobserve(el); continue; }
+    if (canvasHold) { const f = el.querySelector("iframe"); if (f) f.src = "about:blank"; el.querySelector("video")?.pause(); }
+    else setTimeout(() => { if (!canvasHold) { embedIO.unobserve(el); embedIO.observe(el); } }, 250);
+  }
+});
+
 /* ---------- people ---------- */
 const profiles = new Map(); // user id -> {id,name,avatar_url,color}
 async function loadProfiles() {
@@ -324,9 +346,11 @@ function buildItem(row) {
     el.appendChild(v);
   } else if (row.type === "embed") {
     const f = document.createElement("iframe");
-    f.src = row.url; f.allow = "fullscreen; picture-in-picture"; f.allowFullscreen = true;
-    f.referrerPolicy = "strict-origin-when-cross-origin"; // YouTube returns error 153 without a referrer f.loading = "lazy";
+    f.dataset.src = row.url; // loaded by embedIO while on screen
+    f.allow = "fullscreen; picture-in-picture"; f.allowFullscreen = true;
+    f.referrerPolicy = "strict-origin-when-cross-origin"; // YouTube returns error 153 without a referrer
     el.appendChild(f);
+    embedEls.add(el); embedIO.observe(el);
   } else if (row.type === "link") {
     const a = document.createElement("a");
     a.target = "_blank"; a.rel = "noopener noreferrer"; a.draggable = false;
@@ -398,7 +422,9 @@ function setQuery(q) {
   emit("filter", q);
 }
 function removeLocal(id) {
-  els.get(id)?.remove(); els.delete(id); items.delete(id);
+  const gone = els.get(id);
+  if (gone) { embedIO.unobserve(gone); embedEls.delete(gone); gone.remove(); }
+  els.delete(id); items.delete(id);
   if (selected === id) selected = null;
   $("#empty").hidden = items.size > 0;
   emit("items-changed");
