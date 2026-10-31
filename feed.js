@@ -137,7 +137,7 @@ function footer(r) {
   const cc = (D.comments.get(r.id) || []).length;
   return [
     ...D.EMOJIS.map((e) => h("button", { class: "react" + (D.mine(r.id, e) ? " on" : ""), on: { click: () => D.toggleReact(r.id, e) } }, e, counts[e] ? h("b", {}, " " + counts[e]) : null)),
-    h("button", { class: "react", on: { click: () => MB.viewer.open(r.id) } }, "💬", cc ? h("b", {}, " " + cc) : null),
+    h("button", { class: "react", title: "Comments", on: { click: () => MB.comments.open(r.id) } }, "💬", cc ? h("b", {}, " " + cc) : null),
     (r.type === "embed" || r.type === "video") && h("button", { class: "react", title: "Full screen: swipe through videos", on: { click: () => MB.reels.open(r.id) } }, "⛶"),
     r.type === "embed" && /instagram/.test(r.url) && h("button", { class: "react", title: "Instagram won't play it here? Attach the video file", on: { click: () => MB.attachVideo(r) } }, "📎"),
     r.type === "embed" && h("button", { class: "react", title: "Watch again", on: { click: (e) => MB.replay(e.currentTarget.closest(".card")) } }, "↻"),

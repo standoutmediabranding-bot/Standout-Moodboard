@@ -74,6 +74,7 @@ root.addEventListener("pointerdown", () => { if (isOpen) showChrome(); }, true);
 let actTimer;
 function activate(i) {
   showChrome();
+  MB.comments?.switchTo(slides[i].r.id); // if the comment panel is open, follow the video you swiped to
   // 1) right away: silence everything that is not the current slide
   slides.forEach((s, j) => {
     if (j === i) return;
@@ -97,7 +98,7 @@ function paintRail(s) {
   const r = s.r, counts = D.reactionCounts(r.id), cc = (D.comments.get(r.id) || []).length, fav = D.favs.has(r.id);
   s.rail.replaceChildren(...[
     rbtn("🔥", counts["🔥"] || "", D.mine(r.id, "🔥"), () => D.toggleReact(r.id, "🔥")),
-    rbtn("💬", cc || "", false, () => MB.viewer.open(r.id)),
+    rbtn("💬", cc || "", false, () => MB.comments.open(r.id)), // a panel over the video, not a second player
     rbtn(fav ? "★" : "☆", "", fav, () => D.toggleFav(r.id)),
     r.type === "embed" ? rbtn("↻", "", false, () => MB.replay(s.media)) : null,
     s.kind === "ig" ? rbtn("📎", "", false, () => MB.attachVideo(s.r, refresh)) : null, // Instagram won't play it: attach the file
@@ -146,6 +147,7 @@ function open(id) {
 function close(fromHistory) {
   if (!isOpen) return;
   isOpen = false;
+  MB.comments?.close();
   MB.emit("media-hold", -1);
   clearTimeout(chromeTimer);
   io?.disconnect(); io = null;
