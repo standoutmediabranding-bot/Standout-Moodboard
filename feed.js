@@ -94,6 +94,7 @@ function footer(r) {
   return [
     ...D.EMOJIS.map((e) => h("button", { class: "react" + (D.mine(r.id, e) ? " on" : ""), on: { click: () => D.toggleReact(r.id, e) } }, e, counts[e] ? h("b", {}, " " + counts[e]) : null)),
     h("button", { class: "react", on: { click: () => MB.viewer.open(r.id) } }, "💬", cc ? h("b", {}, " " + cc) : null),
+    r.type === "embed" && h("button", { class: "react", title: "Watch again", on: { click: (e) => MB.replay(e.currentTarget.closest(".card")) } }, "↻"),
     h("span", { class: "grow" }),
     h("button", { class: "react" + (D.favs.has(r.id) ? " on" : ""), title: "Save", on: { click: () => D.toggleFav(r.id) } }, D.favs.has(r.id) ? "★" : "☆"),
   ];

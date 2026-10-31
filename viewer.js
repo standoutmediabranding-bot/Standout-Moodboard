@@ -18,6 +18,15 @@ function origUrl(row) {
   m = u.match(/player\.vimeo\.com\/video\/(\d+)/); if (m) return `https://vimeo.com/${m[1]}`;
   return MB.safeUrl(u);
 }
+// Instagram's embed has no replay button, so reload the player to start it over.
+function replay(scope) {
+  const f = scope?.querySelector("iframe");
+  if (!f) return;
+  const src = f.src;
+  f.src = "about:blank";
+  setTimeout(() => (f.src = src), 80);
+}
+MB.replay = replay;
 const boardName = (id) => [...$("#board-select").options].find((o) => o.value === id)?.textContent || "";
 const isOwner = () => current && current.created_by === MB.user.id;
 
@@ -67,6 +76,7 @@ function paintReacts() {
   const o = origUrl(current);
   reactsBox.replaceChildren(
     ...D.EMOJIS.map((e) => h("button", { class: "react" + (D.mine(current.id, e) ? " on" : ""), on: { click: () => D.toggleReact(current.id, e) } }, e, counts[e] ? h("b", {}, " " + counts[e]) : null)),
+    current.type === "embed" && h("button", { class: "react", title: "Watch again", on: { click: () => replay(root) } }, "↻ Replay"),
     h("span", { class: "grow" }),
     h("button", { class: "react" + (fav ? " on" : ""), title: "Save to my list", on: { click: () => D.toggleFav(current.id) } }, fav ? "★ Saved" : "☆ Save"),
     o && h("a", { class: "btn", href: o, target: "_blank", rel: "noopener noreferrer" }, "Open original"));
