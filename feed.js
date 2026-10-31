@@ -77,14 +77,34 @@ const passes = (r) => {
 const cache = new Map(); // id -> {el, sig}
 const sigOf = (r) => JSON.stringify([r.type, r.url, r.text, r.note, r.tags, r.status, MB.nameOf(r.created_by)]);
 
+// Uploaded videos pause, and Instagram/YouTube players are unloaded, once their card has scrolled away.
+// An iframe can't be paused from outside, so unloading it is what stops the sound. It reloads when you scroll back.
+const mediaIO = new IntersectionObserver((entries) => {
+  for (const e of entries) {
+    const el = e.target;
+    if (el.tagName === "VIDEO") { if (!e.isIntersecting) el.pause(); continue; }
+    const f = el.querySelector("iframe");
+    if (!f) continue;
+    const want = e.isIntersecting ? f.dataset.src : "about:blank";
+    if (f.getAttribute("src") !== want) f.src = want;
+  }
+}, { root: feed, rootMargin: "150px 0px" });
+
 function preview(r) {
   if (r.type === "image") return h("img", { src: r.url, loading: "lazy", alt: "", on: { click: () => MB.viewer.open(r.id) } });
-  if (r.type === "video") return h("video", { src: r.url, controls: true, muted: true, loop: true, playsInline: true, preload: "metadata" });
+  if (r.type === "video") {
+    const v = h("video", { src: r.url, controls: true, muted: true, loop: true, playsInline: true, preload: "metadata" });
+    mediaIO.observe(v);
+    return v;
+  }
   if (r.type === "embed") {
     const ig = /instagram/.test(r.url);
-    // loads by itself as the card scrolls near the screen (loading="lazy"), no tap needed
-    return h("div", { class: "embed " + (ig ? "tall" : "wide") },
-      h("iframe", { src: r.url, loading: "lazy", allow: "fullscreen; picture-in-picture", allowFullscreen: true, referrerPolicy: "strict-origin-when-cross-origin" }));
+    // mediaIO loads it as the card scrolls near the screen and unloads it when it leaves (which also stops its audio)
+    const f = h("iframe", { allow: "fullscreen; picture-in-picture", allowFullscreen: true, referrerPolicy: "strict-origin-when-cross-origin" });
+    f.dataset.src = r.url;
+    const box = h("div", { class: "embed " + (ig ? "tall" : "wide") }, f);
+    mediaIO.observe(box);
+    return box;
   }
   if (r.type === "note") return h("div", { class: "bignote", on: { click: () => MB.viewer.open(r.id) } }, r.text || "(empty note)");
   let host = r.url; try { host = new URL(r.url).hostname; } catch {}

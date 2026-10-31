@@ -382,3 +382,7 @@ button.linkish { background: none; border: 0; text-align: left; padding: 0; }
 .r-zone { position: absolute; left: 0; right: 0; z-index: 3; }
 .r-zone.t { top: 0; height: 28%; }
 .r-zone.b { bottom: 0; height: 28%; }
+
+/* reels: top buttons + hint fade out after a moment (tap the screen to bring them back) */
+.r-top, .r-hint { transition: opacity .5s ease; }
+.reels.chrome-hidden .r-top, .reels.chrome-hidden .r-hint { opacity: 0; pointer-events: none; }

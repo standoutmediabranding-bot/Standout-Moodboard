@@ -62,8 +62,18 @@ function play(s) {
   s.node.play().catch(() => { muted = true; s.node.muted = true; s.node.play().catch(() => {}); paintRail(s); });
 }
 
+// the top buttons and the hint fade away after a couple of seconds; a tap or the next video brings them back
+let chromeTimer;
+function showChrome() {
+  root.classList.remove("chrome-hidden");
+  clearTimeout(chromeTimer);
+  chromeTimer = setTimeout(() => root.classList.add("chrome-hidden"), 2500);
+}
+root.addEventListener("pointerdown", () => { if (isOpen) showChrome(); }, true);
+
 let actTimer;
 function activate(i) {
+  showChrome();
   // 1) right away: silence everything that is not the current slide
   slides.forEach((s, j) => {
     if (j === i) return;
@@ -134,6 +144,7 @@ function open(id) {
 function close(fromHistory) {
   if (!isOpen) return;
   isOpen = false;
+  clearTimeout(chromeTimer);
   io?.disconnect(); io = null;
   slides.forEach((s) => { stop(s); unmount(s); });
   slides = []; list = []; scroller = null; idx = -1;
