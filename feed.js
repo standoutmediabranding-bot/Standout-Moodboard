@@ -80,10 +80,9 @@ function preview(r) {
   if (r.type === "video") return h("video", { src: r.url, controls: true, muted: true, loop: true, playsInline: true, preload: "metadata" });
   if (r.type === "embed") {
     const ig = /instagram/.test(r.url);
-    const box = h("div", { class: "embed " + (ig ? "tall" : "wide") },
-      h("button", { class: "load", on: { click: () => box.replaceChildren(h("iframe", { src: r.url, allow: "fullscreen; picture-in-picture", allowFullscreen: true, referrerPolicy: "strict-origin-when-cross-origin" })) } },
-        h("span", { class: "play" }, "▶"), ig ? "Tap to load Instagram reel" : "Tap to play"));
-    return box;
+    // loads by itself as the card scrolls near the screen (loading="lazy"), no tap needed
+    return h("div", { class: "embed " + (ig ? "tall" : "wide") },
+      h("iframe", { src: r.url, loading: "lazy", allow: "fullscreen; picture-in-picture", allowFullscreen: true, referrerPolicy: "strict-origin-when-cross-origin" }));
   }
   if (r.type === "note") return h("div", { class: "bignote", on: { click: () => MB.viewer.open(r.id) } }, r.text || "(empty note)");
   let host = r.url; try { host = new URL(r.url).hostname; } catch {}
