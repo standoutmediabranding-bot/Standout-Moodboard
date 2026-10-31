@@ -22,8 +22,9 @@
   <form class="card" id="auth-form">
     <h1 id="auth-title">Standout Moodboard</h1>
     <p class="muted">Sign in to see the team's references.</p>
-    <label>Email<input type="email" id="email" required autocomplete="email"></label>
-    <label>Password<input type="password" id="password" required minlength="6" autocomplete="current-password"></label>
+    <label>Email<input type="email" id="email" required autocomplete="email" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email"></label>
+    <label>Password<input type="password" id="password" required minlength="6" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false"></label>
+    <button type="button" class="link" id="show-pw">Show password</button>
     <p id="auth-error" class="error" hidden></p>
     <button class="primary" id="auth-submit">Sign in</button>
     <button type="button" class="link" id="auth-toggle">New here? Create an account</button>

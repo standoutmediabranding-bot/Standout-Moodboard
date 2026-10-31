@@ -115,6 +115,11 @@ $("#auth-toggle").onclick = () => {
   $("#auth-toggle").textContent = signUpMode ? "Have an account? Sign in" : "New here? Create an account";
   $("#password").autocomplete = signUpMode ? "new-password" : "current-password";
 };
+$("#show-pw").onclick = () => {
+  const p = $("#password"), show = p.type === "password";
+  p.type = show ? "text" : "password";
+  $("#show-pw").textContent = show ? "Hide password" : "Show password";
+};
 $("#auth-forgot").onclick = async () => {
   const err = $("#auth-error"); err.hidden = false;
   const email = $("#email").value.trim();
@@ -141,7 +146,7 @@ $("#auth-form").onsubmit = async (e) => {
     location.reload();
     return;
   }
-  const creds = { email: $("#email").value.trim(), password: $("#password").value };
+  const creds = { email: $("#email").value.trim().toLowerCase(), password: $("#password").value };
   const { data, error } = signUpMode ? await sb.auth.signUp(creds) : await sb.auth.signInWithPassword(creds);
   if (error) { err.textContent = error.message; err.hidden = false; return; }
   if (signUpMode && !data.session) { err.textContent = "Check your email to confirm, then sign in."; err.hidden = false; }
