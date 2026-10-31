@@ -12,6 +12,7 @@ let current = null;      // item row being shown
 let replyTo = null;      // comment being replied to
 
 function origUrl(row) {
+  if (row.type === "video" && /^https?:\/\//.test(row.text || "")) return row.text; // video attached to a reel keeps its Instagram link
   const u = row.url || "";
   let m = u.match(/instagram\.com\/reel\/([\w-]+)\/embed/); if (m) return `https://www.instagram.com/reel/${m[1]}/`;
   m = u.match(/youtube-nocookie\.com\/embed\/([\w-]+)/); if (m) return `https://youtu.be/${m[1]}`;
@@ -78,6 +79,7 @@ function paintReacts() {
     ...D.EMOJIS.map((e) => h("button", { class: "react" + (D.mine(current.id, e) ? " on" : ""), on: { click: () => D.toggleReact(current.id, e) } }, e, counts[e] ? h("b", {}, " " + counts[e]) : null)),
     (current.type === "embed" || current.type === "video") && h("button", { class: "react", title: "Full screen: swipe through videos", on: { click: () => { const id = current.id; close(); MB.reels.open(id); } } }, "⛶ Full screen"),
     current.type === "embed" && h("button", { class: "react", title: "Watch again", on: { click: () => replay(root) } }, "↻ Replay"),
+    current.type === "embed" && h("button", { class: "react", title: "Instagram won't play it here? Attach the video file", on: { click: () => attachVideo(current) } }, "📎 Attach video"),
     h("span", { class: "grow" }),
     h("button", { class: "react" + (fav ? " on" : ""), title: "Save to my list", on: { click: () => D.toggleFav(current.id) } }, fav ? "★ Saved" : "☆ Save"),
     o && h("a", { class: "btn", href: o, target: "_blank", rel: "noopener noreferrer" }, "Open original"),
@@ -175,6 +177,33 @@ window.addEventListener("keydown", (e) => { if (e.key === "Escape" && !root.hidd
 MB.bus.addEventListener("open-item", (e) => open(e.detail));
 MB.bus.addEventListener("social-changed", (e) => { if (current && e.detail === current.id) { paintReacts(); paintComments(); } });
 MB.bus.addEventListener("profiles", () => { if (current) { paintComments(); paintMentions(); } });
+// Instagram decides per video whether it plays inside an embed. When it won't, attach the video file to the same card.
+function attachVideo(row, done) {
+  const input = h("input", { type: "file", accept: "video/*" });
+  input.onchange = async () => {
+    const f = input.files[0];
+    if (!f) return;
+    if (f.size > MB.MAX_FILE_MB * 1024 * 1024) return MB.status(`That file is over ${MB.MAX_FILE_MB} MB. Trim or compress it first.`, 5000);
+    MB.status("Uploading video…");
+    const path = `${row.board_id}/${crypto.randomUUID()}-${f.name.replace(/[^\w.\-]+/g, "_")}`;
+    const up = await sbc().storage.from(MB.BUCKET).upload(path, f, { contentType: f.type });
+    if (up.error) return MB.status("Upload failed: " + up.error.message, 5000);
+    const url = sbc().storage.from(MB.BUCKET).getPublicUrl(path).data.publicUrl;
+    const dim = await new Promise((res) => {
+      const v = document.createElement("video");
+      v.preload = "metadata"; v.onloadedmetadata = () => res({ w: v.videoWidth, h: v.videoHeight }); v.onerror = () => res({}); v.src = url;
+    });
+    const w = 280, hh = dim.w && dim.h ? Math.round((w * dim.h) / dim.w) : 500;
+    const { data, error } = await sbc().from("items").update({ type: "video", url, path, text: origUrl(row), w, h: hh }).eq("id", row.id).select().single();
+    if (error) return MB.status(error.message, 4000);
+    MB.status("Video attached. It plays right here now.", 3000);
+    if (MB.items.has(row.id)) { MB.removeLocal(row.id); MB.upsertLocal(data); }
+    if (current && current.id === row.id) { current = data; render(); }
+    done?.(data);
+  };
+  input.click();
+}
+MB.attachVideo = attachVideo;
 MB.viewer = { open, close };
 MB.origUrl = origUrl;
 

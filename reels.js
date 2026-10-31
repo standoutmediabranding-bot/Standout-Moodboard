@@ -100,6 +100,7 @@ function paintRail(s) {
     rbtn("💬", cc || "", false, () => MB.viewer.open(r.id)),
     rbtn(fav ? "★" : "☆", "", fav, () => D.toggleFav(r.id)),
     r.type === "embed" ? rbtn("↻", "", false, () => MB.replay(s.media)) : null,
+    s.kind === "ig" ? rbtn("📎", "", false, () => MB.attachVideo(s.r, refresh)) : null, // Instagram won't play it: attach the file
     s.kind === "mp4" ? rbtn(muted ? "🔇" : "🔊", "", false, () => { muted = !muted; if (s.node) s.node.muted = muted; slides.forEach(paintRail); }) : null,
   ].filter(Boolean)); // replaceChildren would print null/false as text
 }
@@ -163,5 +164,18 @@ window.addEventListener("keydown", (e) => {
   else if (e.key.toLowerCase() === "m") { muted = !muted; slides.forEach((s) => { if (s.node && s.kind === "mp4") s.node.muted = muted; paintRail(s); }); }
 });
 
-MB.reels = { open, close };
+// a card was just turned into an uploaded video: swap its slide in place
+function refresh(row) {
+  const i = slides.findIndex((s) => s.r.id === row.id);
+  if (i < 0) return;
+  const old = slides[i];
+  io?.unobserve(old.el); stop(old); unmount(old);
+  const s = buildSlide(row, i);
+  slides[i] = s; list[i] = row;
+  old.el.replaceWith(s.el);
+  if (idx === i) idx = -1; // lets the observer treat it as newly arrived, so it starts playing
+  io?.observe(s.el);
+}
+
+MB.reels = { open, close, refresh };
 })();

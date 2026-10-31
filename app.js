@@ -22,7 +22,14 @@ const profiles = new Map(); // user id -> {id,name,avatar_url,color}
 async function loadProfiles() {
   const { data } = await sb.from("profiles").select("*");
   (data || []).forEach((p) => profiles.set(p.id, p));
+  cset("profiles", [...profiles.values()]);
 }
+
+/* ---------- instant start: this device remembers the last board, so it shows before the network answers ---------- */
+const ck = (k) => `mb:c:${user?.id}:${k}`;
+const cget = (k) => { try { return JSON.parse(localStorage.getItem(ck(k))); } catch { return null; } };
+const cset = (k, v) => { try { localStorage.setItem(ck(k), JSON.stringify(v)); } catch {} };
+const cclear = () => { try { Object.keys(localStorage).filter((k) => k.startsWith("mb:c:")).forEach((k) => localStorage.removeItem(k)); } catch {} };
 const nameOf = (uid) => profiles.get(uid)?.name || "";
 function avatarEl(uid, size = 22) {
   const p = profiles.get(uid);
@@ -106,10 +113,11 @@ function setUser(u) {
   if (same && u) return;
   if (u) {
     $("#who").textContent = u.email;
+    hydrate();                          // instantly show the last board from this device's memory
     loadBoards();                       // don't wait for profiles: they load in parallel and the cards repaint with names/avatars
     loadProfiles().then(() => { emit("profiles"); emit("login"); });
   }
-  else { closeBoard(); }
+  else { closeBoard(); cclear(); }
 }
 
 /* ---------- auth ---------- */
@@ -167,12 +175,29 @@ async function loadBoards(selectId, keepOpen) {
   if (!list.length) { const b = await createBoard("My first board"); if (!b) return; list = [b]; allBoards.push(b); }
   const current = board?.id;
   const sel = $("#board-select");
-  sel.innerHTML = "";
-  for (const b of list) { const o = document.createElement("option"); o.value = b.id; o.textContent = b.name; sel.appendChild(o); }
+  fillBoardSelect(list);
+  cset("boards", list.map((b) => ({ id: b.id, name: b.name })));
   const want = selectId || (keepOpen && current) || localStorage.getItem("mb:last");
   sel.value = list.some((b) => b.id === want) ? want : list[0].id;
-  if (keepOpen && sel.value === current) return; // just refreshed the list, keep the canvas as is
+  if (sel.value === current) return; // already open (or opening from the device's memory): keep it, don't reload
   openBoard(sel.value);
+}
+function fillBoardSelect(list) {
+  const sel = $("#board-select");
+  sel.innerHTML = "";
+  for (const b of list) { const o = document.createElement("option"); o.value = b.id; o.textContent = b.name; sel.appendChild(o); }
+}
+// Show the last board straight away, and start fetching its cards without waiting for the board list.
+function hydrate() {
+  const p = cget("profiles");
+  if (p) p.forEach((x) => profiles.set(x.id, x));
+  const last = localStorage.getItem("mb:last");
+  const b = cget("boards");
+  if (!b?.length) { if (last) openBoard(last); return; }
+  fillBoardSelect(b);
+  const id = b.some((x) => x.id === last) ? last : b[0].id;
+  $("#board-select").value = id;
+  openBoard(id);
 }
 async function createBoard(name) {
   const { data, error } = await sb.from("boards").insert({ name, created_by: user.id }).select().single();
@@ -196,13 +221,21 @@ async function openBoard(id) {
   closeBoard();
   board = { id };
   localStorage.setItem("mb:last", id);
+  const restoreView = () => {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem("mb:view:" + id)); } catch {}
+    if (saved) { view = saved; applyView(); } else if (stage.clientWidth) fit(); else needFit = true;
+  };
+  const cached = cget("items:" + id);
+  if (cached?.length) { cached.forEach(upsertLocal); restoreView(); } // instant: last known cards, refreshed below
   const { data, error } = await sb.from("items").select("*").eq("board_id", id).is("deleted_at", null).order("z");
   if (error) return status(error.message, 4000);
   if (board?.id !== id) return;
+  const fresh = new Set(data.map((r) => r.id));
+  for (const k of [...items.keys()]) if (!fresh.has(k)) removeLocal(k); // deleted since this device last looked
   data.forEach(upsertLocal);
-  let saved = null;
-  try { saved = JSON.parse(localStorage.getItem("mb:view:" + id)); } catch {}
-  if (saved) { view = saved; applyView(); } else if (stage.clientWidth) fit(); else needFit = true;
+  cset("items:" + id, data.slice(-200));
+  restoreView();
   emit("board-opened", id);
   channel = sb.channel("board-" + id)
     .on("postgres_changes", { event: "*", schema: "public", table: "items", filter: `board_id=eq.${id}` },
