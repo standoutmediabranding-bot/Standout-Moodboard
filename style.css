@@ -456,3 +456,7 @@ details.edit summary { cursor: pointer; color: var(--muted); font-size: 13px; pa
 @media (min-width: 701px) {
   .csheet { left: auto; right: 16px; bottom: 16px; width: 380px; border-radius: 14px; max-height: 60vh; }
 }
+
+/* Feed cards share the ".card" class with the login box, which adds 28px side padding + a grid layout.
+   That pushed everything in a feed card (including the Instagram player) to the right. Undo it for feed cards only. */
+.feed-grid .card { display: block; padding: 0; width: auto; gap: 0; }
