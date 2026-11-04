@@ -460,3 +460,9 @@ details.edit summary { cursor: pointer; color: var(--muted); font-size: 13px; pa
 /* Feed cards share the ".card" class with the login box, which adds 28px side padding + a grid layout.
    That pushed everything in a feed card (including the Instagram player) to the right. Undo it for feed cards only. */
 .feed-grid .card { display: block; padding: 0; width: auto; gap: 0; }
+
+/* Full screen, Instagram: the video window is as tall as the screen (no black band above/below on tall phones).
+   Width stays min(100vw, 9:16 of the height), so wide screens still get a normal 9:16 window.
+   reels.js scales the player to the window height and centres it sideways. */
+.r-media.ig { height: 100%; }
+.r-media.ig iframe { left: var(--ox, calc(var(--s, 1) * -87.75px)); }

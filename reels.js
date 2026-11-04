@@ -44,8 +44,15 @@ function mount(s, active = false) {
   fitIg(s);
 }
 // scale factor so Instagram's video (364.5px wide inside its 540px embed) fills this slide's window
+// Instagram's video is 364.5 x 648 px inside its 540px embed, starting 87.75px from the left. Scale it so its height fills
+// the window, then centre it sideways (on a tall phone it is a little wider than the window, so the edges trim slightly).
 function fitIg(s) {
-  if (s.kind === "ig" && s.media.clientWidth) s.media.style.setProperty("--s", String(s.media.clientWidth / 364.5));
+  if (s.kind !== "ig") return;
+  const W = s.media.clientWidth, H = s.media.clientHeight;
+  if (!W || !H) return;
+  const k = H / 648;
+  s.media.style.setProperty("--s", String(k));
+  s.media.style.setProperty("--ox", (W - 364.5 * k) / 2 - 87.75 * k + "px");
 }
 window.addEventListener("resize", () => slides.forEach(fitIg));
 function unmount(s) { if (!s.node) return; s.node = null; s.auto = false; s.media.replaceChildren(); }
