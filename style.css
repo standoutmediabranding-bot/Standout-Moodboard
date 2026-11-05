@@ -466,3 +466,21 @@ details.edit summary { cursor: pointer; color: var(--muted); font-size: 13px; pa
    reels.js scales the player to the window height and centres it sideways. */
 .r-media.ig { height: 100%; }
 .r-media.ig iframe { left: var(--ox, calc(var(--s, 1) * -87.75px)); }
+
+/* ---------- "X shared a new reel" banner + one-time offer ---------- */
+.newbanner {
+  position: fixed; left: 12px; right: 12px; top: 10px; z-index: 120;
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  background: var(--panel); color: var(--text); border: 1px solid var(--accent); border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.35); animation: slidein .25s ease-out;
+}
+.newbanner[hidden] { display: none; }
+.newbanner button { border: 0; background: none; font-size: 16px; padding: 4px 8px; }
+@keyframes slidein { from { transform: translateY(-20px); opacity: 0; } to { transform: none; opacity: 1; } }
+.notify-prompt {
+  position: fixed; left: 12px; right: 12px; bottom: 74px; z-index: 110;
+  display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+  background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.35);
+}
+@media (min-width: 701px) { .newbanner { left: auto; width: 380px; right: 16px; } .notify-prompt { left: auto; width: 420px; right: 16px; bottom: 16px; } }

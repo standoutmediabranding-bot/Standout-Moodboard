@@ -112,6 +112,27 @@ MB.bus.addEventListener("media-hold", (ev) => {
   }, 250);
 });
 
+// Instagram's player tells its page how tall its content is with a "MEASURE" message ({type, details:{height}}), which is
+// exactly what Instagram's own embed script uses. Following it makes a horizontal reel's card short (no blank area) and
+// gives tall content enough room (so "View more on Instagram" no longer lands on top of the video).
+const igHeights = (() => { try { return JSON.parse(localStorage.getItem("mb:igh")) || {}; } catch { return {}; } })();
+function setIgHeight(box, px) { box.style.aspectRatio = "auto"; box.style.height = px + "px"; }
+window.addEventListener("message", (e) => {
+  let host; try { host = new URL(e.origin).hostname; } catch { return; }
+  if (!/(^|\.)instagram\.com$/.test(host)) return;
+  let o; try { o = JSON.parse(e.data); } catch { return; }
+  if (!o || o.type !== "MEASURE" || typeof o.details?.height !== "number") return;
+  for (const box of document.querySelectorAll("#feed .embed.tall")) {
+    const f = box.querySelector("iframe");
+    if (!f || f.contentWindow !== e.source) continue;
+    const px = Math.round(Math.min(Math.max(o.details.height, 160), box.clientWidth * 2.2));
+    setIgHeight(box, px);
+    igHeights[box.dataset.id] = px;
+    try { localStorage.setItem("mb:igh", JSON.stringify(igHeights)); } catch {}
+    return;
+  }
+});
+
 function preview(r) {
   if (r.type === "image") return h("img", { src: r.url, loading: "lazy", alt: "", on: { click: () => MB.viewer.open(r.id) } });
   if (r.type === "video") {
@@ -125,6 +146,10 @@ function preview(r) {
     const f = h("iframe", { allow: "fullscreen; picture-in-picture", allowFullscreen: true, referrerPolicy: "strict-origin-when-cross-origin" });
     f.dataset.src = r.url;
     const box = h("div", { class: "embed " + (ig ? "tall" : "wide") }, f);
+    if (ig) {
+      box.dataset.id = r.id;
+      if (igHeights[r.id]) setIgHeight(box, igHeights[r.id]); // size remembered from last time: no jump when it loads
+    }
     watch(box);
     return box;
   }

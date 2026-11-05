@@ -166,6 +166,7 @@ async function loadNotifs() {
   D.notifs = { items: it.data || [], comments: relevant };
   MB.emit("notifs");
 }
+D.loadNotifs = loadNotifs;
 D.markSeen = () => { localStorage.setItem(seenKey(), new Date().toISOString()); D.notifs = { items: [], comments: [] }; MB.emit("notifs"); };
 D.notifCount = () => D.notifs.items.length + D.notifs.comments.length;
 })();

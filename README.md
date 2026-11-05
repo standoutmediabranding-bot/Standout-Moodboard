@@ -52,3 +52,14 @@ After `setup.sql`, also run `setup2.sql` once (profiles, comments, reactions, sa
 ## Files
 
 `app.js` canvas core · `social.js` menu, profile, members, trash · `compose.js` save form · `data.js` reactions/comments/what's new · `viewer.js` item viewer · `feed.js` feed and mobile bar · `boards.js` boards manager and Tidy up · `insights.js` dashboard, saved list, WhatsApp text.
+
+## Phone notifications ("sabari shared a new reel") — one-time setup
+
+The banner inside the app works without any setup. Notifications when the app is **closed** need these steps:
+
+1. **Database:** Supabase → SQL Editor → paste `setup3.sql` → Run.
+2. **Function:** Supabase → Edge Functions → Deploy a new function → name it exactly `notify-new-item` → paste the code from `supabase/functions/notify-new-item/index.ts` → Deploy.
+3. **Secrets:** Supabase → Edge Functions → Secrets → add `VAPID_PUBLIC_KEY` (same value as in `config.js`), `VAPID_PRIVATE_KEY` (from the secret key file; never put it in the repo) and `VAPID_SUBJECT` (`https://standout-moodboard.vercel.app`).
+4. **Publish** the app (`git push`). Everyone then taps **Turn on** on the "Get notified?" bar, or ☰ Menu → Notifications.
+
+Needs Chrome on Android with the app installed. New keys: `node scripts/make-vapid-keys.js`.
